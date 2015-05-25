@@ -18,7 +18,12 @@ class GameManager():
 
     def connect_to_arduino(self, serial_addr):
         try:
-            self.arduino = serial.Serial(serial_addr, baudrate=9600, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE, timeout=.1)
+            self.arduino = serial.Serial(serial_addr,
+                                         baudrate=9600,
+                                         bytesize=serial.EIGHTBITS,
+                                         parity=serial.PARITY_NONE,
+                                         stopbits=serial.STOPBITS_ONE,
+                                         timeout=.1)
         except Exception as e:
             print("error opening serial connection")
             raise e
@@ -55,6 +60,7 @@ class GameManager():
         pygame.mixer.music.play()
         while pygame.mixer.music.get_busy() == True:
             continue
+        time.sleep(1)
 
 if __name__ == '__main__':
     g = GameManager(GOAL_SOUND_PATH)
