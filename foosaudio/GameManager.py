@@ -1,7 +1,5 @@
 __author__ = 'andrewwang'
 
-# import pyaudio
-# import wave
 import serial
 from os import listdir
 from os.path import isfile, join
@@ -11,7 +9,7 @@ import pygame
 
 MAX_RETRY = 5
 GOAL_SOUND_PATH = "./sounds/goal/"
-ARDUINO_SERIAL_ADDR = "/dev/ttyUSB"
+ARDUINO_SERIAL_ADDR = "/dev/ttyUSB0"
 
 class GameManager():
     def __init__(self, sounds_dir):
@@ -19,18 +17,17 @@ class GameManager():
         self.sound_files = [f for f in listdir(sounds_dir) if isfile(join(sounds_dir, f))]
 
     def connect_to_arduino(self, serial_addr):
-        self.arduino = retry_on_failure(serial.Serial,
-                                        serial_addr,
-                                        baudrate=9600,
-                                        bytesize=serial.EIGHTBITS,
-                                        parity=serial.PARITY_NONE,
-                                        stopbits=serial.STOPBITS_ONE,
-                                        timeout=1)
+        try:
+            self.arduino = serial.Serial(serial_addr, baudrate=9600, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE, timeout=.1)
+        except Exception as e:
+            print("error opening serial connection")
+            raise e
+
     def run(self):
         while True:
             try:
-                blob = self.arduino.read(10)
-                self.arduino.flushInput()
+                blob = self.arduino.read(100)
+                #self.arduino.flushInput()
 
                 if '0' in blob:
                     self.goal_a()
@@ -50,32 +47,14 @@ class GameManager():
         self.play_goal_sound()
 
     def play_goal_sound(self):
-        file = GOAL_SOUND_PATH + self.sound_files(random.randint(0, len(self.sound_files) - 1))
-
+        #print str(self.sound_files)
+        file = GOAL_SOUND_PATH + self.sound_files[random.randint(0, len(self.sound_files) - 1)]
+        #print str(file)
         pygame.mixer.init()
         pygame.mixer.music.load(file)
         pygame.mixer.music.play()
         while pygame.mixer.music.get_busy() == True:
             continue
-
-        # p = pyaudio.PyAudio()
-        # f = wave.open(file, "rb")
-        # stream = p.open(format=p.get_format_from_width(f.getsampwidth()),
-        #         channels=f.getnchannels(),
-        #         rate=f.getframerate(),
-        #         output=True)
-        #
-        # data = f.readframes(1024)
-        #
-        # while data != '':
-        #     stream.write(data)
-        #     data = f.readframes(1024)
-        #
-        # stream.stop_stream()
-        # stream.close()
-        #
-        # p.terminate()
-
 
 if __name__ == '__main__':
     g = GameManager(GOAL_SOUND_PATH)
