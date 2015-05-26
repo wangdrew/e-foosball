@@ -34,6 +34,10 @@ int g_pin[2][3] = {
 
 int goal_a_sensor = 12;
 int goal_b_sensor = 8;
+int goal_a_output = 4;
+int goal_b_output = 7;
+int goal_a_output_state = LOW;
+int goal_b_output_state = LOW;
 
 int state = STATE_IDLE;
 
@@ -45,6 +49,10 @@ void setup_pins() {
   }
   pinMode(goal_a_sensor, INPUT);
   pinMode(goal_b_sensor, INPUT);
+  pinMode(goal_a_output, OUTPUT);
+  pinMode(goal_b_output, OUTPUT);
+  digitalWrite(goal_a_output, goal_a_output_state);
+  digitalWrite(goal_b_output, goal_b_output_state);
 }
 
 void output(int strip_id, int *color) {
@@ -103,7 +111,12 @@ void loop() {
       break;
         
     case STATE_GOAL_A:
-      Serial.print("0");  // to raspberry pi
+      if (goal_a_output_state == HIGH) {
+        goal_a_output_state = LOW;
+      } else {
+        goal_a_output_state = HIGH;
+      }
+      digitalWrite(goal_a_output, goal_a_output_state);
       turn_off_lights();
       cycle_random_color(STRIP0, 2000); // ms
       turn_off_lights();
@@ -111,7 +124,12 @@ void loop() {
       break;
       
     case STATE_GOAL_B:
-      Serial.print("1");  // to raspberry pi
+      if (goal_b_output_state == HIGH) {
+        goal_b_output_state = LOW;
+      } else {
+        goal_b_output_state = HIGH;
+      }
+      digitalWrite(goal_b_output, goal_b_output_state);
       turn_off_lights();
       cycle_random_color(STRIP1, 2000); // ms
       turn_off_lights();
