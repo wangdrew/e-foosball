@@ -1,68 +1,58 @@
 __author__ = 'andrewwang'
 
-# import serial
+import serial
 from os import listdir
 from os.path import isfile, join
 import time
 import random
 import pygame
-import RPi.GPIO as GPIO
+from multiprocessing import Process, Queue
 
 MAX_RETRY = 5
 GOAL_SOUND_PATH = "./sounds/goal/"
-# ARDUINO_SERIAL_ADDR = "/dev/ttyUSB0"
-GOAL_A_GPIO = 2
-GOAL_B_GPIO = 3
+ARDUINO_SERIAL_ADDR = "/dev/ttyUSB0"
 
 class GameManager():
     def __init__(self, sounds_dir):
+        self.goal_q = Queue(1)
         self.sounds = sounds_dir
         self.sound_files = [f for f in listdir(sounds_dir) if isfile(join(sounds_dir, f))]
 
     def connect_to_arduino(self, serial_addr):
-        GPIO.setmode(GPIO.BCM)
-        GPIO.setup(GOAL_A_GPIO, GPIO.IN)
-        GPIO.setup(GOAL_B_GPIO, GPIO.IN)
-        self.goal_a_gpio_state = GPIO.input(GOAL_A_GPIO)
-        self.goal_b_gpio_state = GPIO.input(GOAL_B_GPIO)
-        #
-        # try:
-        #     self.arduino = serial.Serial(serial_addr,
-        #                                  baudrate=9600,
-        #                                  bytesize=serial.EIGHTBITS,
-        #                                  parity=serial.PARITY_NONE,
-        #                                  stopbits=serial.STOPBITS_ONE,
-        #                                  timeout=.1)
-        # except Exception as e:
-        #     print("error opening serial connection")
-        #     raise e
 
-    def check_goal(self):
-        ret = "no goal"
-        if GPIO.input(GOAL_A_GPIO) != self.goal_a_gpio_state:
-            self.goal_a_gpio_state = GPIO.input(GOAL_A_GPIO)
-            ret = "a"
-        if GPIO.input(GOAL_B_GPIO) != self.goal_b_gpio_state:
-            self.goal_b_gpio_state = GPIO.input(GOAL_B_GPIO)
-            ret = "b"
-        return ret
+        try:
+            self.arduino = serial.Serial(serial_addr,
+                                         baudrate=9600,
+                                         bytesize=serial.EIGHTBITS,
+                                         parity=serial.PARITY_NONE,
+                                         stopbits=serial.STOPBITS_ONE,
+                                         timeout=.1)
+        except Exception as e:
+            print("error opening serial connection")
+            raise e
+
+    def check_goal(self, q):
+        ascii_val = self.arduino.readline()
+        print(ascii_val)
+
+        if ascii_val is chr(ord('A')):
+            q.put("A")
+        elif ascii_val is chr(ord('B')):
+            q.put("B")
+        else:
+            pass
 
     def run(self):
+        goal_checker = Process(target=self.check_goal, args=(self.goal_q,))
+        goal_checker.start()
+
         while True:
-            try:
-                # self.arduino.flushInput()
-                # blob = self.arduino.read(100)
-                goal = checkgoal()
-                if goal == 'a':
-                    self.goal_a()
-                elif goal == 'b':
-                    self.goal_b()
-                else:
-                    pass
-
-            except Exception as e:
+            if self.goal_q.full() and self.goal_q.get() == "A":
+                self.goal_a()
+            elif self.goal_q.full() and self.goal_q.get() == "B":
+                self.goal_b()
+            else:
                 pass
-
 
     def goal_a(self):
         self.play_goal_sound()
@@ -83,26 +73,5 @@ class GameManager():
 
 if __name__ == '__main__':
     g = GameManager(GOAL_SOUND_PATH)
-    # g.connect_to_arduino(ARDUINO_SERIAL_ADDR)
-    g.connect_to_arduino()
+    g.connect_to_arduino(ARDUINO_SERIAL_ADDR)
     g.run()
-
-
-def retry_on_failure(func, *args):
-    ret = None
-    retry_count = 0
-
-    while True:
-        try:
-            ret = func(args)
-            break
-        except Exception as e:
-            retry_count += 1
-            print "failed, retrying..."
-            if retry_count > MAX_RETRY:
-                print "Max retries exceeded"
-                raise e
-
-            time.sleep(1)
-
-    return ret
