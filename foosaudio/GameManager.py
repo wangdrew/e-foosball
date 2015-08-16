@@ -7,6 +7,7 @@ import time
 import random
 import pygame
 from multiprocessing import Process, Queue
+import atexit
 
 MAX_RETRY = 5
 GOAL_SOUND_PATH = "./sounds/goal/"
@@ -17,6 +18,8 @@ class GameManager():
         self.goal_q = Queue(1)
         self.sounds = sounds_dir
         self.sound_files = [f for f in listdir(sounds_dir) if isfile(join(sounds_dir, f))]
+        pygame.mixer.init()
+        atexit.register(self.cleanup())
 
     def connect_to_arduino(self, serial_addr):
 
@@ -63,11 +66,21 @@ class GameManager():
 
     def play_goal_sound(self):
         file = GOAL_SOUND_PATH + self.sound_files[random.randint(0, len(self.sound_files) - 1)]
-        pygame.mixer.init()
+
+        # Stop the mixer if something's playing
+        if pygame.mixer.music.get_busy() == True:
+            pygame.mixer.stop()
+
         pygame.mixer.music.load(file)
         pygame.mixer.music.play()
-        while pygame.mixer.music.get_busy() == True:
-            continue
+
+    def cleanup(self):
+        try:
+            pygame.mixer.music.quit()
+            self.arduino.close()
+        except Exception as e:
+            print("Cleanup exception: " + str(e))
+
 
 if __name__ == '__main__':
     g = GameManager(GOAL_SOUND_PATH)
