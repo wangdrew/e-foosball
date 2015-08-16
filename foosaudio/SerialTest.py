@@ -2,7 +2,7 @@ __author__ = 'andrewwang'
 
 import serial
 
-ARDUINO_SERIAL_ADDR = "/dev/ttyUSB0"
+ARDUINO_SERIAL_ADDR = "/dev/ttyACM0"
 
 def main():
     arduino = serial.Serial(ARDUINO_SERIAL_ADDR,
@@ -16,5 +16,5 @@ def main():
         print(ascii_val)
 
 
-if "__name__" == "__main__":
+if __name__ == "__main__":
     main()

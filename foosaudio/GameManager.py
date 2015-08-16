@@ -10,7 +10,7 @@ from multiprocessing import Process, Queue
 
 MAX_RETRY = 5
 GOAL_SOUND_PATH = "./sounds/goal/"
-ARDUINO_SERIAL_ADDR = "/dev/ttyUSB0"
+ARDUINO_SERIAL_ADDR = "/dev/ttyACM0"
 
 class GameManager():
     def __init__(self, sounds_dir):
@@ -32,10 +32,7 @@ class GameManager():
 
     def check_goal(self, q):
         while True:
-            print("Reading line")
-            self.arduino.flush()
             ascii_val = self.arduino.readline()
-            self.connect_to_arduino(ARDUINO_SERIAL_ADDR)
             print(ascii_val)
             if "A" in ascii_val:
                 q.put("A")
@@ -57,21 +54,20 @@ class GameManager():
                 pass
 
     def goal_a(self):
+        print("Goal A Sound")
         self.play_goal_sound()
 
     def goal_b(self):
+        print("Goal B Sound")
         self.play_goal_sound()
 
     def play_goal_sound(self):
-        #print str(self.sound_files)
         file = GOAL_SOUND_PATH + self.sound_files[random.randint(0, len(self.sound_files) - 1)]
-        #print str(file)
         pygame.mixer.init()
         pygame.mixer.music.load(file)
         pygame.mixer.music.play()
         while pygame.mixer.music.get_busy() == True:
             continue
-        time.sleep(1)
 
 if __name__ == '__main__':
     g = GameManager(GOAL_SOUND_PATH)
