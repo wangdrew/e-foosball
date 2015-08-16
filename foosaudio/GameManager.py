@@ -20,7 +20,6 @@ class GameManager():
         self.goal_q = Queue(1)
         self.sounds = sounds_dir
         self.sound_files = [f for f in listdir(sounds_dir) if isfile(join(sounds_dir, f))]
-        pygame.mixer.init()
         atexit.register(self.cleanup())
 
     def connect_to_arduino(self, serial_addr):
@@ -40,10 +39,8 @@ class GameManager():
             ascii_val = self.arduino.readline()
             if "A" in ascii_val:
                 q.put("A")
-                print("Putting A on Q")
             elif "B" in ascii_val:
                 q.put("B")
-                print("Putting B on Q")
             else:
                 pass
 
@@ -52,7 +49,7 @@ class GameManager():
         self.goal_checker.start()
 
         while True:
-            if self.goal_q_full():
+            if self.goal_q.full():
                 value = self.goal_q.get()
                 if value == "A":
                     self.goal_a()
@@ -62,19 +59,17 @@ class GameManager():
                     pass    # Unknown
 
     def goal_a(self):
-        print("Goal A Sound")
         self.play_goal_sound()
 
     def goal_b(self):
-        print("Goal B Sound")
         self.play_goal_sound()
 
     def play_goal_sound(self):
         file = GOAL_SOUND_PATH + self.sound_files[random.randint(0, len(self.sound_files) - 1)]
 
+        pygame.mixer.init()
         # Stop the mixer if something's playing
         if pygame.mixer.music.get_busy() == True:
-            print("Stopping whatever's playing")
             pygame.mixer.stop()
 
         pygame.mixer.music.load(file)
