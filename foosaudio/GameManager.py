@@ -25,22 +25,24 @@ class GameManager():
                                          baudrate=9600,
                                          bytesize=serial.EIGHTBITS,
                                          parity=serial.PARITY_NONE,
-                                         stopbits=serial.STOPBITS_ONE,
-                                         timeout=.1)
+                                         stopbits=serial.STOPBITS_ONE)
         except Exception as e:
             print("error opening serial connection")
             raise e
 
     def check_goal(self, q):
-        ascii_val = self.arduino.readline()
-        print(ascii_val)
-
-        if ascii_val is chr(ord('A')):
-            q.put("A")
-        elif ascii_val is chr(ord('B')):
-            q.put("B")
-        else:
-            pass
+        while True:
+            print("Reading line")
+            self.arduino.flush()
+            ascii_val = self.arduino.readline()
+            self.connect_to_arduino(ARDUINO_SERIAL_ADDR)
+            print(ascii_val)
+            if "A" in ascii_val:
+                q.put("A")
+            elif "B" in ascii_val:
+                q.put("B")
+            else:
+                pass
 
     def run(self):
         goal_checker = Process(target=self.check_goal, args=(self.goal_q,))
