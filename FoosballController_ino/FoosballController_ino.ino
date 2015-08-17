@@ -27,13 +27,21 @@ int BLACK[3] = {0,0,0};
 
 int* COLORS[9] = {RED, ORANGE, YELLOW, LGREEN, GREEN, AQUA, BLUE, PURPLE, WHITE};
 
+// Uno R3 pinouts
 int g_pin[2][3] = {
-  {5,6,3}, //strip 0 RGB
-  {10,11,9} //strip 1 RGB
+    {3,5,6},   //strip 0 RGB
+    {9,10,11}  //strip 1 RGB
 };
-
-int goal_a_sensor = 12;
+int goal_a_sensor = 7;
 int goal_b_sensor = 8;
+
+// Mini Pro pinouts 
+//int g_pin[2][3] = {
+//  {5,6,3}, //strip 0 RGB
+//  {10,11,9} //strip 1 RGB
+//};
+//int goal_a_sensor = 12;
+//int goal_b_sensor = 8;
 
 int state = STATE_IDLE;
 
