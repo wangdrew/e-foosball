@@ -1,3 +1,5 @@
+#include <Adafruit_NeoPixel.h>
+
 #define R 0
 #define G 1
 #define B 2
@@ -6,7 +8,7 @@
 #define STRIP1 1
 
 #define STATE_IDLE 0
-#define STATE_BEGIN_GAME 1
+#define STATE_NEW_GAME 1
 #define STATE_GAME 2
 #define STATE_GOAL_A 3
 #define STATE_GOAL_B 4
@@ -14,6 +16,21 @@
 
 #define NUM_COLORS 9
 
+// Uno R3 pinouts
+int g_pin[2][3] = {
+    {3,5,6},   //strip 0 RGB
+    {9,10,11}  //strip 1 RGB
+};
+int goal_a_sensor = 7;
+int goal_b_sensor = 8;
+int score_keep_a_pin = 12;
+int score_keep_b_pin = 13;
+
+Adafruit_NeoPixel score_strip_a = Adafruit_NeoPixel(60, score_keep_a_pin, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel score_strip_b = Adafruit_NeoPixel(60, score_keep_b_pin, NEO_GRB + NEO_KHZ800);
+int numStripPixels = 12;
+
+// Colors for analog RGB goal lights
 int RED[3] = {255,0,0};
 int ORANGE[3] = {255,30,0};
 int YELLOW[3] = {255,60,0};
@@ -24,24 +41,30 @@ int BLUE[3] = {0,0,255};
 int PURPLE[3] = {255,0,255};
 int WHITE[3] = {255,255,255};
 int BLACK[3] = {0,0,0};
-
 int* COLORS[9] = {RED, ORANGE, YELLOW, LGREEN, GREEN, AQUA, BLUE, PURPLE, WHITE};
 
-// Uno R3 pinouts
-int g_pin[2][3] = {
-    {3,5,6},   //strip 0 RGB
-    {9,10,11}  //strip 1 RGB
-};
-int goal_a_sensor = 7;
-int goal_b_sensor = 8;
-
-// Mini Pro pinouts 
-//int g_pin[2][3] = {
-//  {5,6,3}, //strip 0 RGB
-//  {10,11,9} //strip 1 RGB
-//};
-//int goal_a_sensor = 12;
-//int goal_b_sensor = 8;
+//Colors for Adafruit digital RGB strips
+//annoying to define colors per strip! 
+uint32_t score_strip_a_red = score_strip_a.Color(RED[R], RED[G], RED[B]);
+uint32_t score_strip_b_red = score_strip_b.Color(RED[R], RED[G], RED[B]);
+uint32_t score_strip_a_orange = score_strip_a.Color(ORANGE[R], ORANGE[G], ORANGE[B]);
+uint32_t score_strip_b_orange = score_strip_b.Color(ORANGE[R], ORANGE[G], ORANGE[B]);
+uint32_t score_strip_a_yellow = score_strip_a.Color(YELLOW[R], YELLOW[G], YELLOW[B]);
+uint32_t score_strip_b_yellow = score_strip_b.Color(YELLOW[R], YELLOW[G], YELLOW[B]);
+uint32_t score_strip_a_lgreen = score_strip_a.Color(LGREEN[R], LGREEN[G], LGREEN[B]);
+uint32_t score_strip_b_lgreen = score_strip_b.Color(LGREEN[R], LGREEN[G], LGREEN[B]);
+uint32_t score_strip_a_green = score_strip_a.Color(GREEN[R], GREEN[G], GREEN[B]);
+uint32_t score_strip_b_green = score_strip_b.Color(GREEN[R], GREEN[G], GREEN[B]);
+uint32_t score_strip_a_aqua = score_strip_a.Color(AQUA[R], AQUA[G], AQUA[B]);
+uint32_t score_strip_b_aqua = score_strip_b.Color(AQUA[R], AQUA[G], AQUA[B]);
+uint32_t score_strip_a_blue = score_strip_a.Color(BLUE[R], BLUE[G], BLUE[B]);
+uint32_t score_strip_b_blue = score_strip_b.Color(BLUE[R], BLUE[G], BLUE[B]);
+uint32_t score_strip_a_purple = score_strip_a.Color(PURPLE[R], PURPLE[G], PURPLE[B]);
+uint32_t score_strip_b_purple = score_strip_b.Color(PURPLE[R], PURPLE[G], PURPLE[B]);
+uint32_t score_strip_a_white = score_strip_a.Color(WHITE[R], WHITE[G], WHITE[B]);
+uint32_t score_strip_b_white = score_strip_b.Color(WHITE[R], WHITE[G], WHITE[B]);
+uint32_t score_strip_a_black = score_strip_a.Color(BLACK[R], BLACK[G], BLACK[B]);
+uint32_t score_strip_b_black = score_strip_b.Color(BLACK[R], BLACK[G], BLACK[B]);
 
 int state = STATE_IDLE;
 
@@ -64,6 +87,18 @@ void output(int strip_id, int *color) {
 void turn_off_lights() {
   output(STRIP0, BLACK);
   output(STRIP1, BLACK);
+}
+
+void reset_score_strips() {
+  // don't do anything fancy yet, just turn off strips
+  turn_off_score_strips();
+}
+
+void turn_off_score_strips() {
+  for (int i=0; i<numStripPixels; i++) {
+    score_strip_a.setPixelColor(i, score_strip_a_red);
+//    score_strip_b.setPixelColor(i, adafruit_red);
+  }
 }
 
 void cycle_random_color(int strip_id, int duration) {
@@ -100,6 +135,10 @@ void check_sensors() {
 void setup() {
  setup_pins;
  Serial.begin(9600);
+ score_strip_a.begin();
+ score_strip_a.show();
+ score_strip_b.begin();
+ score_strip_b.show();
 }
 
 void loop() {
@@ -123,6 +162,12 @@ void loop() {
       Serial.println("B");
       cycle_random_color(STRIP1, 2000); // ms
       turn_off_lights();
+      state = STATE_IDLE;
+      break;
+    
+    case STATE_NEW_GAME:
+      turn_off_lights();
+      reset_score_strips();
       state = STATE_IDLE;
       break;
   }
