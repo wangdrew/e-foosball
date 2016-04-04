@@ -12,7 +12,8 @@
 #define STATE_GAME 2
 #define STATE_GOAL_A 3
 #define STATE_GOAL_B 4
-#define STATE_BALL_RETURN 5
+#define STATE_VICTORY_A 5
+#define STATE_VICTORY_B 6
 
 #define NUM_COLORS 9
 
@@ -66,7 +67,22 @@ uint32_t score_strip_b_white = score_strip_b.Color(WHITE[R], WHITE[G], WHITE[B])
 uint32_t score_strip_a_black = score_strip_a.Color(BLACK[R], BLACK[G], BLACK[B]);
 uint32_t score_strip_b_black = score_strip_b.Color(BLACK[R], BLACK[G], BLACK[B]);
 
+uint32_t score_strip_a_colors[8] = {score_strip_a_red, score_strip_a_orange, score_strip_a_yellow, \
+score_strip_a_lgreen, score_strip_a_green, score_strip_a_aqua, score_strip_a_blue, score_strip_a_purple};
+
+uint32_t score_strip_b_colors[8] = {score_strip_b_red, score_strip_b_orange, score_strip_b_yellow, \
+score_strip_b_lgreen, score_strip_b_green, score_strip_b_aqua, score_strip_b_blue, score_strip_b_purple};
+
+
+// Mutable state variables
 int state = STATE_IDLE;
+int numGoalsA = 0;
+int numGoalsB = 0;
+int numScoreStripLedsOnA = 0;
+int numScoreStripLedsOnB = 0;
+int maxGoals = 5;
+uint32_t score_strip_a_color = score_strip_a_colors[random(8)];
+uint32_t score_strip_b_color = score_strip_b_colors[random(8)];
 
 void setup_pins() {
   for (int strip = 0; strip < 2; strip++) {
@@ -90,14 +106,17 @@ void turn_off_lights() {
 }
 
 void reset_score_strips() {
-  // don't do anything fancy yet, just turn off strips
+  numScoreStripLedsOnA = 0;
+  numScoreStripLedsOnB = 0;
+  score_strip_a_color = score_strip_a_colors[random(8)];
+  score_strip_b_color = score_strip_b_colors[random(8)];
   turn_off_score_strips();
 }
 
 void turn_off_score_strips() {
   for (int i=0; i<numStripPixels; i++) {
-    score_strip_a.setPixelColor(i, score_strip_a_red);
-//    score_strip_b.setPixelColor(i, adafruit_red);
+    score_strip_a.setPixelColor(i, score_strip_a_black);
+    score_strip_b.setPixelColor(i, score_strip_b_black);
   }
 }
 
@@ -132,6 +151,63 @@ void check_sensors() {
   }
 }
 
+// returns true if A is victorious
+boolean incrementScoreA() {
+  numGoalsA++;
+  numScoreStripLedsOnA = numGoalsA*2;
+  for (int i=0; i<numScoreStripLedsOnA; i++) {
+    score_strip_a.setPixelColor(i, score_strip_a_color);
+  }
+  if (numGoalsA == maxGoals) return true;
+  else return false;
+}
+
+// returns true if B is victorious
+boolean incrementScoreB() {
+  numGoalsB++;
+  numScoreStripLedsOnB = numGoalsB*2;
+  for (int i=0; i<numScoreStripLedsOnB; i++) {
+    score_strip_b.setPixelColor(i, score_strip_b_color);
+  }
+  if (numGoalsB == maxGoals) return true;
+  else return false;
+}
+
+void reset_score() {
+  numGoalsA = 0;
+  numGoalsB = 0;
+}
+
+void flashVictoryA() {
+  int flashDelay = 500;
+  // flash winning side score counter 5 times
+  for (int i=0; i<5; i++) {
+    for (int pixel=0; pixel<numScoreStripLedsOnA; pixel++) {
+      score_strip_a.setPixelColor(pixel, score_strip_a_color);
+    }
+    delay(flashDelay);
+    for (int pixel=0; pixel<numStripPixels; pixel++) {
+      score_strip_a.setPixelColor(pixel, score_strip_a_black);
+    }
+    delay(flashDelay);
+  }
+}
+
+void flashVictoryB() {
+  int flashDelay = 500;
+  // flash winning side score counter 5 times
+  for (int i=0; i<5; i++) {
+    for (int pixel=0; pixel<numScoreStripLedsOnA; pixel++) {
+      score_strip_b.setPixelColor(pixel, score_strip_b_color);
+    }
+    delay(flashDelay);
+    for (int pixel=0; pixel<numStripPixels; pixel++) {
+      score_strip_b.setPixelColor(pixel, score_strip_b_black);
+    }
+    delay(flashDelay);
+  }
+}
+
 void setup() {
  setup_pins;
  Serial.begin(9600);
@@ -154,7 +230,8 @@ void loop() {
       Serial.println("A");
       cycle_random_color(STRIP0, 2000); // ms
       turn_off_lights();
-      state = STATE_IDLE;
+      if (incrementScoreA() == true) state = STATE_VICTORY_A;
+      else state = STATE_IDLE;
       break;
       
     case STATE_GOAL_B:
@@ -162,6 +239,17 @@ void loop() {
       Serial.println("B");
       cycle_random_color(STRIP1, 2000); // ms
       turn_off_lights();
+      if (incrementScoreB() == true) state = STATE_VICTORY_B;
+      else state = STATE_IDLE;
+      break;
+      
+    case STATE_VICTORY_A:
+      flashVictoryA();
+      state = STATE_IDLE;
+      break;
+      
+    case STATE_VICTORY_B:
+      flashVictoryB();
       state = STATE_IDLE;
       break;
     
@@ -169,6 +257,8 @@ void loop() {
       turn_off_lights();
       reset_score_strips();
       state = STATE_IDLE;
+      reset_score();
+
       break;
   }
 }
