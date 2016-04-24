@@ -4,9 +4,6 @@
 #define G 1
 #define B 2
 
-#define STRIP0 0
-#define STRIP1 1
-
 #define STATE_IDLE 0
 #define STATE_NEW_GAME 1
 #define STATE_GAME 2
@@ -14,6 +11,7 @@
 #define STATE_GOAL_B 4
 #define STATE_VICTORY_A 5
 #define STATE_VICTORY_B 6
+#define STATE_IDLE_LIGHTS_OFF 7
 
 #define NUM_COLORS 9
 
@@ -27,9 +25,12 @@ int goal_b_sensor = 8;
 int score_keep_a_pin = 12;
 int score_keep_b_pin = 13;
 
-Adafruit_NeoPixel score_strip_a = Adafruit_NeoPixel(60, score_keep_a_pin, NEO_GRB + NEO_KHZ800);
-Adafruit_NeoPixel score_strip_b = Adafruit_NeoPixel(60, score_keep_b_pin, NEO_GRB + NEO_KHZ800);
-int numStripPixels = 12;
+// LED strips
+Adafruit_NeoPixel scoreStripA = Adafruit_NeoPixel(10, score_keep_a_pin, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel scoreStripB = Adafruit_NeoPixel(10, score_keep_b_pin, NEO_GRB + NEO_KHZ800);
+int numStripPixels = 10;
+int goalStripA = 0;
+int goalStripB = 1;
 
 // Colors for analog RGB goal lights
 int RED[3] = {255,0,0};
@@ -45,44 +46,28 @@ int BLACK[3] = {0,0,0};
 int* COLORS[9] = {RED, ORANGE, YELLOW, LGREEN, GREEN, AQUA, BLUE, PURPLE, WHITE};
 
 //Colors for Adafruit digital RGB strips
-//annoying to define colors per strip! 
-uint32_t score_strip_a_red = score_strip_a.Color(RED[R], RED[G], RED[B]);
-uint32_t score_strip_b_red = score_strip_b.Color(RED[R], RED[G], RED[B]);
-uint32_t score_strip_a_orange = score_strip_a.Color(ORANGE[R], ORANGE[G], ORANGE[B]);
-uint32_t score_strip_b_orange = score_strip_b.Color(ORANGE[R], ORANGE[G], ORANGE[B]);
-uint32_t score_strip_a_yellow = score_strip_a.Color(YELLOW[R], YELLOW[G], YELLOW[B]);
-uint32_t score_strip_b_yellow = score_strip_b.Color(YELLOW[R], YELLOW[G], YELLOW[B]);
-uint32_t score_strip_a_lgreen = score_strip_a.Color(LGREEN[R], LGREEN[G], LGREEN[B]);
-uint32_t score_strip_b_lgreen = score_strip_b.Color(LGREEN[R], LGREEN[G], LGREEN[B]);
-uint32_t score_strip_a_green = score_strip_a.Color(GREEN[R], GREEN[G], GREEN[B]);
-uint32_t score_strip_b_green = score_strip_b.Color(GREEN[R], GREEN[G], GREEN[B]);
-uint32_t score_strip_a_aqua = score_strip_a.Color(AQUA[R], AQUA[G], AQUA[B]);
-uint32_t score_strip_b_aqua = score_strip_b.Color(AQUA[R], AQUA[G], AQUA[B]);
-uint32_t score_strip_a_blue = score_strip_a.Color(BLUE[R], BLUE[G], BLUE[B]);
-uint32_t score_strip_b_blue = score_strip_b.Color(BLUE[R], BLUE[G], BLUE[B]);
-uint32_t score_strip_a_purple = score_strip_a.Color(PURPLE[R], PURPLE[G], PURPLE[B]);
-uint32_t score_strip_b_purple = score_strip_b.Color(PURPLE[R], PURPLE[G], PURPLE[B]);
-uint32_t score_strip_a_white = score_strip_a.Color(WHITE[R], WHITE[G], WHITE[B]);
-uint32_t score_strip_b_white = score_strip_b.Color(WHITE[R], WHITE[G], WHITE[B]);
-uint32_t score_strip_a_black = score_strip_a.Color(BLACK[R], BLACK[G], BLACK[B]);
-uint32_t score_strip_b_black = score_strip_b.Color(BLACK[R], BLACK[G], BLACK[B]);
+uint32_t score_strip_red = scoreStripA.Color(RED[R], RED[G], RED[B]);
+uint32_t score_strip_orange = scoreStripA.Color(ORANGE[R], ORANGE[G], ORANGE[B]);
+uint32_t score_strip_yellow = scoreStripA.Color(YELLOW[R], YELLOW[G], YELLOW[B]);
+uint32_t score_strip_lgreen = scoreStripA.Color(LGREEN[R], LGREEN[G], LGREEN[B]);
+uint32_t score_strip_green = scoreStripA.Color(GREEN[R], GREEN[G], GREEN[B]);
+uint32_t scoreStripAqua = scoreStripA.Color(AQUA[R], AQUA[G], AQUA[B]);
+uint32_t scoreStripBlue = scoreStripA.Color(BLUE[R], BLUE[G], BLUE[B]);
+uint32_t score_strip_purple = scoreStripA.Color(PURPLE[R], PURPLE[G], PURPLE[B]);
+uint32_t score_strip_white = scoreStripA.Color(WHITE[R], WHITE[G], WHITE[B]);
+uint32_t scoreStripBlack = scoreStripA.Color(BLACK[R], BLACK[G], BLACK[B]);
 
-uint32_t score_strip_a_colors[8] = {score_strip_a_red, score_strip_a_orange, score_strip_a_yellow, \
-score_strip_a_lgreen, score_strip_a_green, score_strip_a_aqua, score_strip_a_blue, score_strip_a_purple};
 
-uint32_t score_strip_b_colors[8] = {score_strip_b_red, score_strip_b_orange, score_strip_b_yellow, \
-score_strip_b_lgreen, score_strip_b_green, score_strip_b_aqua, score_strip_b_blue, score_strip_b_purple};
-
+// Game-specific constants
+int maxGoals = 5;
+unsigned long lightsOutTimeout = 300*1000; // in ms
+unsigned long gameResetTimeout = 3600*1000; // in ms
 
 // Mutable state variables
-int state = STATE_IDLE;
+int state = STATE_NEW_GAME;
 int numGoalsA = 0;
 int numGoalsB = 0;
-int numScoreStripLedsOnA = 0;
-int numScoreStripLedsOnB = 0;
-int maxGoals = 5;
-uint32_t score_strip_a_color = score_strip_a_colors[random(8)];
-uint32_t score_strip_b_color = score_strip_b_colors[random(8)];
+unsigned long lastActivityMs = millis();
 
 void setup_pins() {
   for (int strip = 0; strip < 2; strip++) {
@@ -94,81 +79,107 @@ void setup_pins() {
   pinMode(goal_b_sensor, INPUT);
 }
 
-void output(int strip_id, int *color) {
+void drawGoalStrip(int strip_id, int *color) {
   analogWrite(g_pin[strip_id][R], color[R]);
   analogWrite(g_pin[strip_id][G], color[G]);
   analogWrite(g_pin[strip_id][B], color[B]);
 }
 
-void turn_off_lights() {
-  output(STRIP0, BLACK);
-  output(STRIP1, BLACK);
+void turnOffGoalLights() {
+  drawGoalStrip(goalStripA, BLACK);
+  drawGoalStrip(goalStripB, BLACK);
 }
 
-void reset_score_strips() {
-  numScoreStripLedsOnA = 0;
-  numScoreStripLedsOnB = 0;
-  score_strip_a_color = score_strip_a_colors[random(8)];
-  score_strip_b_color = score_strip_b_colors[random(8)];
-  turn_off_score_strips();
-}
-
-void turn_off_score_strips() {
+void turnOffScoreStrips() {
+    // reset whole strip
   for (int i=0; i<numStripPixels; i++) {
-    score_strip_a.setPixelColor(i, score_strip_a_black);
-    score_strip_b.setPixelColor(i, score_strip_b_black);
+    scoreStripA.setPixelColor(i, scoreStripBlack);
+    scoreStripB.setPixelColor(i, scoreStripBlack);
   }
+  scoreStripA.show();
+  scoreStripB.show();
 }
 
-void cycle_random_color(int strip_id, int duration) {
+void check_sensors() {
+  if (digitalRead(goal_a_sensor) == LOW) state = STATE_GOAL_A;
+  if (digitalRead(goal_b_sensor) == LOW) state = STATE_GOAL_B;
+}
+
+void drawScoreStrip(int numGoals, Adafruit_NeoPixel &score_strip) {
+  int numLedsPerGoal = 2;
+  // reset whole strip
+  for (int i=0; i<numStripPixels; i++) {
+    score_strip.setPixelColor(i, scoreStripBlack);
+  }
+  
+  // set score goals LEDs
+  for (int i=0; i<numGoals*numLedsPerGoal; i++) {
+      score_strip.setPixelColor(i, scoreStripBlue);
+  }
+  
+  score_strip.show();
+}
+
+// returns true if A is victorious
+boolean incrementScoreA(int flashDuration) {
+  numGoalsA++;
+  
+  // make sure the opposite score strip is lit
+  drawScoreStrip(numGoalsB, scoreStripB);
+  
+  // flash the goal and score strip lights
   int micro_delay = 25; // ms
   int elapsed = 0;
   int loop_counter = 0;
   int *color = COLORS[random(NUM_COLORS)];
   
-  while (elapsed < duration) {
-
+  while (elapsed < flashDuration) {
     if (loop_counter % 2 == 1) {
-      output(strip_id, BLACK);
+      drawGoalStrip(goalStripA, BLACK);
+      drawScoreStrip(numGoalsA-1, scoreStripA);
     }
     else {
-      output(strip_id, color);
+      drawGoalStrip(goalStripA, color);
+      drawScoreStrip(numGoalsA, scoreStripA);
     }
-    
     delay(micro_delay);
     elapsed += micro_delay;
     loop_counter++;
   }
-}
-
-void check_sensors() {
-  if (digitalRead(goal_a_sensor) == LOW) {
-    state = STATE_GOAL_A;
-  }
   
-  if (digitalRead(goal_b_sensor) == LOW) {
-    state = STATE_GOAL_B;
-  }
-}
-
-// returns true if A is victorious
-boolean incrementScoreA() {
-  numGoalsA++;
-  numScoreStripLedsOnA = numGoalsA*2;
-  for (int i=0; i<numScoreStripLedsOnA; i++) {
-    score_strip_a.setPixelColor(i, score_strip_a_color);
-  }
+  drawScoreStrip(numGoalsA, scoreStripA);
   if (numGoalsA == maxGoals) return true;
   else return false;
 }
 
 // returns true if B is victorious
-boolean incrementScoreB() {
+boolean incrementScoreB(int flashDuration) {
   numGoalsB++;
-  numScoreStripLedsOnB = numGoalsB*2;
-  for (int i=0; i<numScoreStripLedsOnB; i++) {
-    score_strip_b.setPixelColor(i, score_strip_b_color);
+  
+  // make sure the opposite score strip is lit
+  drawScoreStrip(numGoalsA, scoreStripA);
+  
+  // flash the goal and score strip lights
+  int micro_delay = 25; // ms
+  int elapsed = 0;
+  int loop_counter = 0;
+  int *color = COLORS[random(NUM_COLORS)];
+  
+  while (elapsed < flashDuration) {
+    if (loop_counter % 2 == 1) {
+      drawGoalStrip(goalStripB, BLACK);
+      drawScoreStrip(numGoalsB-1, scoreStripB);
+    }
+    else {
+      drawGoalStrip(goalStripB, color);
+      drawScoreStrip(numGoalsB, scoreStripB);
+    }
+    delay(micro_delay);
+    elapsed += micro_delay;
+    loop_counter++;
   }
+  
+  drawScoreStrip(numGoalsB, scoreStripB);
   if (numGoalsB == maxGoals) return true;
   else return false;
 }
@@ -179,43 +190,79 @@ void reset_score() {
 }
 
 void flashVictoryA() {
-  int flashDelay = 500;
-  // flash winning side score counter 5 times
-  for (int i=0; i<5; i++) {
-    for (int pixel=0; pixel<numScoreStripLedsOnA; pixel++) {
-      score_strip_a.setPixelColor(pixel, score_strip_a_color);
-    }
-    delay(flashDelay);
-    for (int pixel=0; pixel<numStripPixels; pixel++) {
-      score_strip_a.setPixelColor(pixel, score_strip_a_black);
-    }
-    delay(flashDelay);
-  }
+  int *color = COLORS[random(NUM_COLORS)];
+  drawGoalStrip(goalStripA, color);
+  drawGoalStrip(goalStripB, color);
+  drawScoreStrip(0, scoreStripB);
+  rainbowCycle(2, scoreStripA);
+  turnOffGoalLights();
 }
 
 void flashVictoryB() {
-  int flashDelay = 500;
-  // flash winning side score counter 5 times
-  for (int i=0; i<5; i++) {
-    for (int pixel=0; pixel<numScoreStripLedsOnA; pixel++) {
-      score_strip_b.setPixelColor(pixel, score_strip_b_color);
-    }
-    delay(flashDelay);
-    for (int pixel=0; pixel<numStripPixels; pixel++) {
-      score_strip_b.setPixelColor(pixel, score_strip_b_black);
-    }
-    delay(flashDelay);
-  }
+  int *color = COLORS[random(NUM_COLORS)];
+  drawGoalStrip(goalStripA, color);
+  drawGoalStrip(goalStripB, color);
+  drawScoreStrip(0, scoreStripA);
+  rainbowCycle(1, scoreStripB);
+  turnOffGoalLights();
+  
 }
 
 void setup() {
  setup_pins;
  Serial.begin(9600);
- score_strip_a.begin();
- score_strip_a.show();
- score_strip_b.begin();
- score_strip_b.show();
+ scoreStripA.begin();
+ scoreStripA.show();
+ scoreStripB.begin();
+ scoreStripB.show();
+ state = STATE_NEW_GAME;
 }
+
+/**
+Fancy schmancy Adafruit functions for rainbow wipe
+*/
+
+void rainbowCycle(uint8_t wait, Adafruit_NeoPixel &strip) {
+  uint16_t i, j;
+
+  for(j=0; j<256*5; j++) { // 5 cycles of all colors on wheel
+    for(i=0; i< numStripPixels; i++) {
+      strip.setPixelColor(i, Wheel(((i * 256 / numStripPixels) + j) & 255));
+    }
+    strip.show();
+    delay(wait);
+  }
+}
+
+// Input a value 0 to 255 to get a color value.
+// The colours are a transition r - g - b - back to r.
+uint32_t Wheel(byte WheelPos) {
+  WheelPos = 255 - WheelPos;
+  if(WheelPos < 85) {
+    return scoreStripB.Color(255 - WheelPos * 3, 0, WheelPos * 3);
+  }
+  if(WheelPos < 170) {
+    WheelPos -= 85;
+    return scoreStripB.Color(0, WheelPos * 3, 255 - WheelPos * 3);
+  }
+  WheelPos -= 170;
+  return scoreStripB.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
+}
+
+void check_timeout() {
+  unsigned long timeNow = millis();
+  unsigned long timeSinceLastGoal = 0;
+  if (timeNow < lastActivityMs) timeSinceLastGoal = (4294967295 - lastActivityMs) + timeNow;
+  else timeSinceLastGoal = timeNow - lastActivityMs;
+  if (timeSinceLastGoal > gameResetTimeout) state = STATE_NEW_GAME;
+  else if (state == STATE_IDLE && timeSinceLastGoal > lightsOutTimeout) {
+    turnOffGoalLights();
+    turnOffScoreStrips(); 
+    state = STATE_IDLE_LIGHTS_OFF;
+  }
+}
+
+
 
 void loop() {
   
@@ -223,42 +270,46 @@ void loop() {
     
     case STATE_IDLE:
       check_sensors();
+      check_timeout();
       break;
-        
+    
+    case STATE_IDLE_LIGHTS_OFF:
+      check_sensors();
+      check_timeout();
+      break;
+    
     case STATE_GOAL_A:
-      turn_off_lights();
+      turnOffGoalLights();
       Serial.println("A");
-      cycle_random_color(STRIP0, 2000); // ms
-      turn_off_lights();
-      if (incrementScoreA() == true) state = STATE_VICTORY_A;
+      lastActivityMs = millis();
+      if (incrementScoreA(2000) == true) state = STATE_VICTORY_A;
       else state = STATE_IDLE;
       break;
       
     case STATE_GOAL_B:
-      turn_off_lights();
+      turnOffGoalLights();
       Serial.println("B");
-      cycle_random_color(STRIP1, 2000); // ms
-      turn_off_lights();
-      if (incrementScoreB() == true) state = STATE_VICTORY_B;
+      lastActivityMs = millis();
+      if (incrementScoreB(2000) == true) state = STATE_VICTORY_B;
       else state = STATE_IDLE;
       break;
       
     case STATE_VICTORY_A:
       flashVictoryA();
-      state = STATE_IDLE;
+      state = STATE_NEW_GAME;
       break;
       
     case STATE_VICTORY_B:
       flashVictoryB();
-      state = STATE_IDLE;
+      state = STATE_NEW_GAME;
       break;
     
     case STATE_NEW_GAME:
-      turn_off_lights();
-      reset_score_strips();
+      turnOffGoalLights();
+      turnOffScoreStrips();
       state = STATE_IDLE;
       reset_score();
-
+      lastActivityMs = millis();
       break;
   }
 }
