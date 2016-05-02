@@ -4,14 +4,15 @@
 #define G 1
 #define B 2
 
-#define STATE_IDLE 0
-#define STATE_NEW_GAME 1
-#define STATE_GAME 2
-#define STATE_GOAL_A 3
-#define STATE_GOAL_B 4
-#define STATE_VICTORY_A 5
-#define STATE_VICTORY_B 6
-#define STATE_IDLE_LIGHTS_OFF 7
+#define STATE_POWER_OFF 0
+#define STATE_IDLE 1
+#define STATE_IDLE_LIGHTS_OFF 2
+#define STATE_NEW_GAME 3
+#define STATE_GAME 4
+#define STATE_GOAL_A 5
+#define STATE_GOAL_B 6
+#define STATE_VICTORY_A 7
+#define STATE_VICTORY_B 8
 
 #define NUM_COLORS 9
 
@@ -22,10 +23,12 @@ int goalStripPinMatrix[2][3] = {
     {3,5,6},   //strip 0 RGB
     {9,10,11}  //strip 1 RGB
 };
+int pinPowerSwitch = 2;
 int pinGoalSensorA = 7;
 int pinGoalSensorB = 8;
 int pinScoreStripA = 12;
 int pinScoreStripB = 13;
+
 
 // LED strips
 Adafruit_NeoPixel scoreStripA = Adafruit_NeoPixel(10, pinScoreStripA, NEO_GRB + NEO_KHZ800);
@@ -67,11 +70,16 @@ unsigned long gameResetTimeoutSec = 3600;
 unsigned long msInSec = 1000;
 
 // Mutable state variables
-int state = STATE_NEW_GAME;
+volatile int state = STATE_NEW_GAME;
 int numGoalsA = 0;
 int numGoalsB = 0;
 unsigned long lastGoalTs = millis();
 
+
+void togglePowerState() {
+  if (state != STATE_POWER_OFF) state = STATE_POWER_OFF;
+  else state = STATE_NEW_GAME;
+}
 
 void setupPins() {
   for (int strip = 0; strip < 2; strip++) {
@@ -81,6 +89,8 @@ void setupPins() {
   }
   pinMode(pinGoalSensorA, INPUT);
   pinMode(pinGoalSensorB, INPUT);
+  pinMode(pinPowerSwitch, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(pinPowerSwitch), togglePowerState, CHANGE);
 }
 
 void drawGoalStrip(int stripIdx, int *color) {
@@ -270,6 +280,9 @@ void loop() {
   
   switch(state) {
     
+    case STATE_POWER_OFF:
+      break;
+          
     case STATE_IDLE:
       checkGoalSensors();
       checkTimeoutPeriod();
