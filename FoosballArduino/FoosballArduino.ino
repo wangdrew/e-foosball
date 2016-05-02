@@ -98,7 +98,7 @@ void checkGoalSensors() {
   if (digitalRead(pinGoalSensorB) == LOW) state = STATE_GOAL_B;
 }
 
-void drawScoreStrip(int numGoals, Adafruit_NeoPixel &scoreStrip) {
+void drawScoreStrip(int numGoals, Adafruit_NeoPixel &scoreStrip, uint32_t color) {
   int numLedsPerGoal = 2;
   // reset whole strip
   for (int i=0; i<numStripPixels; i++) {
@@ -107,7 +107,7 @@ void drawScoreStrip(int numGoals, Adafruit_NeoPixel &scoreStrip) {
   
   // set score goals LEDs
   for (int i=0; i<numGoals*numLedsPerGoal; i++) {
-      scoreStrip.setPixelColor(i, scoreStripBlue);
+      scoreStrip.setPixelColor(i, color);
   }
   scoreStrip.show();
 }
@@ -127,7 +127,7 @@ boolean incrementScoreA(int flashDuration) {
   numGoalsA++;
   
   // make sure the opposite score strip is lit
-  drawScoreStrip(numGoalsB, scoreStripB);
+  drawScoreStrip(numGoalsB, scoreStripB, scoreStripRed);
   
   // flash the goal and score strip lights
   int flashDelayMs = 25; // ms
@@ -138,19 +138,18 @@ boolean incrementScoreA(int flashDuration) {
   while (elapsedMs < flashDuration) {
     if (numCycles % 2 == 1) {
       drawGoalStrip(goalStripA, colorBlack);
-      drawScoreStrip(numGoalsA-1, scoreStripA);
+      drawScoreStrip(numGoalsA-1, scoreStripA, scoreStripBlue);
     }
     else {
       drawGoalStrip(goalStripA, color);
-      drawScoreStrip(numGoalsA, scoreStripA);
+      drawScoreStrip(numGoalsA, scoreStripA, scoreStripBlue);
     }
     delay(flashDelayMs);
     elapsedMs += flashDelayMs;
     numCycles++;
   }
   
-  // maintain the opposite score strip just in case
-  drawScoreStrip(numGoalsA, scoreStripA);
+  drawScoreStrip(numGoalsA, scoreStripA, scoreStripBlue);
   if (numGoalsA == maxGoals) return true;
   else return false;
 }
@@ -160,7 +159,7 @@ boolean incrementScoreB(int flashDuration) {
   numGoalsB++;
   
   // make sure the opposite score strip is lit
-  drawScoreStrip(numGoalsA, scoreStripA);
+  drawScoreStrip(numGoalsA, scoreStripA, scoreStripBlue);
   
   // flash the goal and score strip lights
   int flashDelayMs = 25; // ms
@@ -171,19 +170,18 @@ boolean incrementScoreB(int flashDuration) {
   while (elapsedMs < flashDuration) {
     if (numCycles % 2 == 1) {
       drawGoalStrip(goalStripB, colorBlack);
-      drawScoreStrip(numGoalsB-1, scoreStripB);
+      drawScoreStrip(numGoalsB-1, scoreStripB, scoreStripRed);
     }
     else {
       drawGoalStrip(goalStripB, color);
-      drawScoreStrip(numGoalsB, scoreStripB);
+      drawScoreStrip(numGoalsB, scoreStripB, scoreStripRed);
     }
     delay(flashDelayMs);
     elapsedMs += flashDelayMs;
     numCycles++;
   }
   
-  // maintain the opposite score strip just in case
-  drawScoreStrip(numGoalsB, scoreStripB);
+  drawScoreStrip(numGoalsB, scoreStripB, scoreStripRed);
   if (numGoalsB == maxGoals) return true;
   else return false;
 }
@@ -197,7 +195,7 @@ void flashVictoryA() {
   int *color = colorList[random(NUM_COLORS)];
   drawGoalStrip(goalStripA, color);
   drawGoalStrip(goalStripB, color);
-  drawScoreStrip(0, scoreStripB);
+  drawScoreStrip(0, scoreStripB, scoreStripRed);
   rainbowCycle(2, scoreStripA);
   turnOffGoalLights();
 }
@@ -206,7 +204,7 @@ void flashVictoryB() {
   int *color = colorList[random(NUM_COLORS)];
   drawGoalStrip(goalStripA, color);
   drawGoalStrip(goalStripB, color);
-  drawScoreStrip(0, scoreStripA);
+  drawScoreStrip(0, scoreStripA, scoreStripBlue);
   rainbowCycle(1, scoreStripB);
   turnOffGoalLights();
   
