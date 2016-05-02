@@ -124,8 +124,7 @@ void turnOffScoreStrips() {
 }
 
 // returns true if A is victorious
-boolean incrementScoreA(int flashDuration) {
-  numGoalsA++;
+void flashGoalA(int flashDuration) {
   
   // make sure the opposite score strip is lit
   drawScoreStrip(numGoalsB, scoreStripB, scoreStripRed);
@@ -151,13 +150,10 @@ boolean incrementScoreA(int flashDuration) {
   }
   
   drawScoreStrip(numGoalsA, scoreStripA, scoreStripBlue);
-  if (numGoalsA == maxGoals) return true;
-  else return false;
 }
 
 // returns true if B is victorious
-boolean incrementScoreB(int flashDuration) {
-  numGoalsB++;
+void flashGoalB(int flashDuration) {
   
   // make sure the opposite score strip is lit
   drawScoreStrip(numGoalsA, scoreStripA, scoreStripBlue);
@@ -183,8 +179,6 @@ boolean incrementScoreB(int flashDuration) {
   }
   
   drawScoreStrip(numGoalsB, scoreStripB, scoreStripRed);
-  if (numGoalsB == maxGoals) return true;
-  else return false;
 }
 
 void resetScore() {
@@ -266,6 +260,12 @@ void checkTimeoutPeriod() {
   }
 }
 
+void reportToGameManager(char goalAorB) {
+  char toSend[5];
+  sprintf(toSend,"%c,%d,%d", goalAorB, numGoalsA, numGoalsB);
+  Serial.println(toSend);
+}
+
 void loop() {
   
   switch(state) {
@@ -281,18 +281,22 @@ void loop() {
       break;
     
     case STATE_GOAL_A:
+      numGoalsA++;
       turnOffGoalLights();
-      Serial.println("A");
+      reportToGameManager('A');
       lastGoalTs = millis();
-      if (incrementScoreA(2000) == true) state = STATE_VICTORY_A;
+      flashGoalA(2000);
+      if (numGoalsA == maxGoals) state = STATE_VICTORY_A;
       else state = STATE_IDLE;
       break;
       
     case STATE_GOAL_B:
+      numGoalsB++;
       turnOffGoalLights();
-      Serial.println("B");
+      reportToGameManager('B');
       lastGoalTs = millis();
-      if (incrementScoreB(2000) == true) state = STATE_VICTORY_B;
+      flashGoalB(2000);
+      if (numGoalsB == maxGoals) state = STATE_VICTORY_B;
       else state = STATE_IDLE;
       break;
       
