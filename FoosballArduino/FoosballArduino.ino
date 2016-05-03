@@ -4,14 +4,15 @@
 #define G 1
 #define B 2
 
-#define STATE_IDLE 0
-#define STATE_NEW_GAME 1
-#define STATE_GAME 2
-#define STATE_GOAL_A 3
-#define STATE_GOAL_B 4
-#define STATE_VICTORY_A 5
-#define STATE_VICTORY_B 6
-#define STATE_IDLE_LIGHTS_OFF 7
+#define STATE_POWER_OFF 0
+#define STATE_IDLE 1
+#define STATE_IDLE_LIGHTS_OFF 2
+#define STATE_NEW_GAME 3
+#define STATE_GAME 4
+#define STATE_GOAL_A 5
+#define STATE_GOAL_B 6
+#define STATE_VICTORY_A 7
+#define STATE_VICTORY_B 8
 
 #define NUM_COLORS 9
 
@@ -22,10 +23,12 @@ int goalStripPinMatrix[2][3] = {
     {3,5,6},   //strip 0 RGB
     {9,10,11}  //strip 1 RGB
 };
+int pinPowerSwitch = 2;
 int pinGoalSensorA = 7;
 int pinGoalSensorB = 8;
 int pinScoreStripA = 12;
 int pinScoreStripB = 13;
+
 
 // LED strips
 Adafruit_NeoPixel scoreStripA = Adafruit_NeoPixel(10, pinScoreStripA, NEO_GRB + NEO_KHZ800);
@@ -62,15 +65,21 @@ uint32_t scoreStripBlack = scoreStripA.Color(colorBlack[R], colorBlack[G], color
 
 // Game-specific constants
 int maxGoals = 5;
-unsigned long lightsOutTimeout = 300*1000; // in ms
-unsigned long gameResetTimeout = 3600*1000; // in ms
+unsigned long lightsOutTimeoutSec = 300;
+unsigned long gameResetTimeoutSec = 3600;
+unsigned long msInSec = 1000;
 
 // Mutable state variables
-int state = STATE_NEW_GAME;
+volatile int state = STATE_NEW_GAME;
 int numGoalsA = 0;
 int numGoalsB = 0;
 unsigned long lastGoalTs = millis();
 
+
+void togglePowerState() {
+  if (state != STATE_POWER_OFF) state = STATE_POWER_OFF;
+  else state = STATE_NEW_GAME;
+}
 
 void setupPins() {
   for (int strip = 0; strip < 2; strip++) {
@@ -80,6 +89,8 @@ void setupPins() {
   }
   pinMode(pinGoalSensorA, INPUT);
   pinMode(pinGoalSensorB, INPUT);
+  pinMode(pinPowerSwitch, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(pinPowerSwitch), togglePowerState, CHANGE);
 }
 
 void drawGoalStrip(int stripIdx, int *color) {
@@ -123,8 +134,7 @@ void turnOffScoreStrips() {
 }
 
 // returns true if A is victorious
-boolean incrementScoreA(int flashDuration) {
-  numGoalsA++;
+void flashGoalA(int flashDuration) {
   
   // make sure the opposite score strip is lit
   drawScoreStrip(numGoalsB, scoreStripB, scoreStripRed);
@@ -150,13 +160,10 @@ boolean incrementScoreA(int flashDuration) {
   }
   
   drawScoreStrip(numGoalsA, scoreStripA, scoreStripBlue);
-  if (numGoalsA == maxGoals) return true;
-  else return false;
 }
 
 // returns true if B is victorious
-boolean incrementScoreB(int flashDuration) {
-  numGoalsB++;
+void flashGoalB(int flashDuration) {
   
   // make sure the opposite score strip is lit
   drawScoreStrip(numGoalsA, scoreStripA, scoreStripBlue);
@@ -182,8 +189,6 @@ boolean incrementScoreB(int flashDuration) {
   }
   
   drawScoreStrip(numGoalsB, scoreStripB, scoreStripRed);
-  if (numGoalsB == maxGoals) return true;
-  else return false;
 }
 
 void resetScore() {
@@ -256,18 +261,28 @@ void checkTimeoutPeriod() {
   unsigned long timeSinceLastGoal = 0;
   if (timeNow < lastGoalTs) timeSinceLastGoal = (MAX_UNSIGNED_LONG - lastGoalTs) + timeNow;
   else timeSinceLastGoal = timeNow - lastGoalTs;
-  if (timeSinceLastGoal > gameResetTimeout) state = STATE_NEW_GAME;
-  else if (state == STATE_IDLE && timeSinceLastGoal > lightsOutTimeout) {
+
+  if (state == STATE_IDLE_LIGHTS_OFF && timeSinceLastGoal > gameResetTimeoutSec * msInSec) state = STATE_NEW_GAME;
+  else if (state == STATE_IDLE && timeSinceLastGoal > lightsOutTimeoutSec * msInSec) {
     turnOffGoalLights();
     turnOffScoreStrips(); 
     state = STATE_IDLE_LIGHTS_OFF;
   }
 }
 
+void reportToGameManager(char goalAorB) {
+  char toSend[5];
+  sprintf(toSend,"%c,%d,%d", goalAorB, numGoalsA, numGoalsB);
+  Serial.println(toSend);
+}
+
 void loop() {
   
   switch(state) {
     
+    case STATE_POWER_OFF:
+      break;
+          
     case STATE_IDLE:
       checkGoalSensors();
       checkTimeoutPeriod();
@@ -279,18 +294,22 @@ void loop() {
       break;
     
     case STATE_GOAL_A:
+      numGoalsA++;
       turnOffGoalLights();
-      Serial.println("A");
+      reportToGameManager('A');
       lastGoalTs = millis();
-      if (incrementScoreA(2000) == true) state = STATE_VICTORY_A;
+      flashGoalA(2000);
+      if (numGoalsA == maxGoals) state = STATE_VICTORY_A;
       else state = STATE_IDLE;
       break;
       
     case STATE_GOAL_B:
+      numGoalsB++;
       turnOffGoalLights();
-      Serial.println("B");
+      reportToGameManager('B');
       lastGoalTs = millis();
-      if (incrementScoreB(2000) == true) state = STATE_VICTORY_B;
+      flashGoalB(2000);
+      if (numGoalsB == maxGoals) state = STATE_VICTORY_B;
       else state = STATE_IDLE;
       break;
       
