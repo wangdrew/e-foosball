@@ -28,7 +28,7 @@ class SoundEventHandler(EventHandler):
             self.play_sound_in("new_game")
             self.previous_goal = ""
             self.consecutive_goals = 0
-        elif "A" is event[0] or "B" is event[0]:
+        elif "A" is event[2] or "B" is event[2]: # A or B is the 3rd character
             current_goal = event[0]     # extract which goal "A" or "B"
             if self.previous_goal == "":
                 self.consecutive_goals = 1
