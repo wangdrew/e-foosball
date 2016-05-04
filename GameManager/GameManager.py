@@ -1,95 +1,72 @@
+# pip requirements: pygame
+
 __author__ = 'andrewwang'
 
 import serial
-from os import listdir
-from os.path import isfile, join
-import time
-import random
-import pygame
 from multiprocessing import Process, Queue
 import atexit
-
-MAX_RETRY = 5
-GOAL_SOUND_PATH = "./sounds/goal/"
-ARDUINO_SERIAL_ADDR = "/dev/ttyACM0"
+from EventHandler import EventHandler
+from SoundEventHandler import SoundEventHandler
 
 class GameManager():
-    def __init__(self, sounds_dir):
+    event_handlers = []
+
+    def __init__(self):
         self.arduino = None
-        self.goal_checker = None
-        self.goal_q = Queue(1)
-        self.sounds = sounds_dir
-        self.sound_files = [f for f in listdir(sounds_dir) if isfile(join(sounds_dir, f))]
+        self.event_thread = None
+        self.event_q = Queue(1)
         atexit.register(self.cleanup())
+        self.register_event_handlers()
+
+    def register_event_handlers(self):
+        self.event_handlers = [SoundEventHandler()]  # only one handler for now
 
     def connect_to_arduino(self, serial_addr):
-
         try:
             self.arduino = serial.Serial(serial_addr,
                                          baudrate=9600,
                                          bytesize=serial.EIGHTBITS,
                                          parity=serial.PARITY_NONE,
                                          stopbits=serial.STOPBITS_ONE)
+
         except Exception as e:
             print("error opening serial connection")
             raise e
 
-    def check_goal(self, q):
+    def poll_serial(self, q):
         while True:
-            ascii_val = self.arduino.readline()
-            if "A" in ascii_val:
-                q.put("A")
-            elif "B" in ascii_val:
-                q.put("B")
-            else:
-                pass
+            ascii_line = self.arduino.readline()
+            if "e:" in ascii_line:
+                q.put(ascii_line[2:])
 
+        
     def run(self):
-        self.goal_checker = Process(target=self.check_goal, args=(self.goal_q,))
-        self.goal_checker.start()
+        self.event_thread = Process(target=self.poll_serial, args=(self.event_q,))
+        self.event_thread.start()
 
         while True:
-            if self.goal_q.full():
-                value = self.goal_q.get()
-                if value == "A":
-                    self.goal_a()
-                elif value == "B":
-                    self.goal_b()
-                else:
-                    pass    # Unknown
+            if self.event_q.full():
+                event = self.event_q.get()
+                for h in self.event_handlers:
+                    h.process_event(event)
 
-    def goal_a(self):
-        self.play_goal_sound()
-
-    def goal_b(self):
-        self.play_goal_sound()
-
-    def play_goal_sound(self):
-        file = GOAL_SOUND_PATH + self.sound_files[random.randint(0, len(self.sound_files) - 1)]
-
-        pygame.mixer.init()
-        # Stop the mixer if something's playing
-        if pygame.mixer.music.get_busy() == True:
-            pygame.mixer.stop()
-
-        pygame.mixer.music.load(file)
-        pygame.mixer.music.play()
 
     def cleanup(self):
         try:
-            if self.goal_checker:
-                self.goal_checker.terminate()
+            if self.event_thread:
+                self.event_thread.terminate()
 
             if self.arduino:
                 self.arduino.close()
 
-            pygame.mixer.quit()
+            for h in self.event_handlers:
+                h.cleanup()
 
         except Exception as e:
             print("Cleanup exception: " + str(e))
 
 
 if __name__ == '__main__':
-    g = GameManager(GOAL_SOUND_PATH)
-    g.connect_to_arduino(ARDUINO_SERIAL_ADDR)
+    g = GameManager()
+    g.connect_to_arduino("/dev/ttyACM0")
     g.run()

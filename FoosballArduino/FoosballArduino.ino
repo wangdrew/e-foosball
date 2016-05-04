@@ -271,10 +271,14 @@ void checkTimeoutPeriod() {
   }
 }
 
-void reportToGameManager(char goalAorB) {
+void reportGoalToGameManager(char goalAorB) {
   char toSend[5];
-  sprintf(toSend,"%c,%d,%d", goalAorB, numGoalsA, numGoalsB);
+  sprintf(toSend,"e:%c,%d,%d", goalAorB, numGoalsA, numGoalsB);
   Serial.println(toSend);
+}
+
+void reportNewGameToGameManager() {
+  Serial.println("e:newgame");
 }
 
 void loop() {
@@ -297,7 +301,7 @@ void loop() {
     case STATE_GOAL_A:
       numGoalsA++;
       turnOffGoalLights();
-      reportToGameManager('A');
+      reportGoalToGameManager('A');
       lastGoalTs = millis();
       flashGoalA(2000);
       if (numGoalsA == maxGoals) state = STATE_VICTORY_A;
@@ -307,7 +311,7 @@ void loop() {
     case STATE_GOAL_B:
       numGoalsB++;
       turnOffGoalLights();
-      reportToGameManager('B');
+      reportGoalToGameManager('B');
       lastGoalTs = millis();
       flashGoalB(2000);
       if (numGoalsB == maxGoals) state = STATE_VICTORY_B;
@@ -330,6 +334,7 @@ void loop() {
       resetScore();
       lastGoalTs = millis();
       state = STATE_IDLE;
+      reportNewGameToGameManager();
       break;
   }
 }
