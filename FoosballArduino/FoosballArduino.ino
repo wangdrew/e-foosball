@@ -66,7 +66,6 @@ uint32_t scoreStripBlack = scoreStripA.Color(colorBlack[R], colorBlack[G], color
 // Game-specific constants
 int maxGoals = 5;
 unsigned long lightsOutTimeoutSec = 300;
-unsigned long gameResetTimeoutSec = 3600;
 unsigned long msInSec = 1000;
 
 // Mutable state variables
@@ -263,8 +262,7 @@ void checkTimeoutPeriod() {
   if (timeNow < lastGoalTs) timeSinceLastGoal = (MAX_UNSIGNED_LONG - lastGoalTs) + timeNow;
   else timeSinceLastGoal = timeNow - lastGoalTs;
 
-  if (state == STATE_IDLE_LIGHTS_OFF && timeSinceLastGoal > gameResetTimeoutSec * msInSec) state = STATE_NEW_GAME;
-  else if (state == STATE_IDLE && timeSinceLastGoal > lightsOutTimeoutSec * msInSec) {
+  if (state == STATE_IDLE && timeSinceLastGoal > lightsOutTimeoutSec * msInSec) {
     turnOffGoalLights();
     turnOffScoreStrips(); 
     state = STATE_IDLE_LIGHTS_OFF;
