@@ -76,11 +76,6 @@ int numGoalsB = 0;
 unsigned long lastGoalTs = millis();
 
 
-void togglePowerState() {
-  if (state != STATE_POWER_OFF) state = STATE_POWER_OFF;
-  else state = STATE_NEW_GAME;
-}
-
 void setupPins() {
   for (int strip = 0; strip < 2; strip++) {
     for (int color = 0; color < 3; color++) {
@@ -89,8 +84,11 @@ void setupPins() {
   }
   pinMode(pinGoalSensorA, INPUT);
   pinMode(pinGoalSensorB, INPUT);
-  pinMode(pinPowerSwitch, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(pinPowerSwitch), togglePowerState, CHANGE);
+}
+
+void togglePowerState() {
+  if (state != STATE_POWER_OFF) state = STATE_POWER_OFF;
+  else state = STATE_NEW_GAME;
 }
 
 void drawGoalStrip(int stripIdx, int *color) {
@@ -217,6 +215,9 @@ void flashVictoryB() {
 
 void setup() {
  setupPins;
+// pinMode(pinPowerSwitch, INPUT_PULLUP);
+// attachInterrupt(0, togglePowerState, CHANGE);
+
  Serial.begin(9600);
  scoreStripA.begin();
  scoreStripA.show();
