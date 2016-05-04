@@ -5,16 +5,17 @@ __author__ = 'andrewwang'
 import serial
 from multiprocessing import Process, Queue
 import atexit
-import EventHandler
-import SoundEventHandler
+from EventHandler import EventHandler
+from SoundEventHandler import SoundEventHandler
 
 class GameManager():
+    event_handlers = []
+
     def __init__(self):
         self.arduino = None
         self.event_thread = None
         self.event_q = Queue(1)
         atexit.register(self.cleanup())
-        self.event_handlers = []
         self.register_event_handlers()
 
     def register_event_handlers(self):
@@ -27,6 +28,7 @@ class GameManager():
                                          bytesize=serial.EIGHTBITS,
                                          parity=serial.PARITY_NONE,
                                          stopbits=serial.STOPBITS_ONE)
+
         except Exception as e:
             print("error opening serial connection")
             raise e
@@ -34,8 +36,8 @@ class GameManager():
     def poll_serial(self, q):
         while True:
             ascii_line = self.arduino.readline()
-            if ascii_line.contains("e:"):
-                q.put(ascii_line)
+            if "e:" in ascii_line:
+                q.put(ascii_line[2:])
 
         
     def run(self):
@@ -44,7 +46,7 @@ class GameManager():
 
         while True:
             if self.event_q.full():
-                event = event_q.get()
+                event = self.event_q.get()
                 for h in self.event_handlers:
                     h.process_event(event)
 

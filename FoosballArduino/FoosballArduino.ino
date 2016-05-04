@@ -278,7 +278,7 @@ void reportGoalToGameManager(char goalAorB) {
 }
 
 void reportNewGameToGameManager() {
-  Serial.println("newgame");
+  Serial.println("e:newgame");
 }
 
 void loop() {
