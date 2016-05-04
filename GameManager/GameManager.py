@@ -5,7 +5,8 @@ __author__ = 'andrewwang'
 import serial
 from multiprocessing import Process, Queue
 import atexit
-
+import EventHandler
+import SoundEventHandler
 
 class GameManager():
     def __init__(self):
@@ -17,8 +18,7 @@ class GameManager():
         self.register_event_handlers()
 
     def register_event_handlers(self):
-        self.event_handlers = [
-            GameSoundEventHandler()]  # only one handler for now
+        self.event_handlers = [SoundEventHandler()]  # only one handler for now
 
     def connect_to_arduino(self, serial_addr):
         try:
