@@ -58,7 +58,7 @@ class SoundEventHandler(EventHandler):
     def play(self, file):
         pygame.mixer.init()
         # Stop the mixer if something's playing
-        if pygame.mixer.music.get_busy() == True:
+        if pygame.mixer.music.get_busy():
             pygame.mixer.stop()
         pygame.mixer.music.load(file)
         pygame.mixer.music.play()
