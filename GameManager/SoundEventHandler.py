@@ -10,16 +10,30 @@ class SoundEventHandler(EventHandler):
     sound_path = "./sounds"  # TODO: hardcoded for now
 
     def __init__(self):
+        pygame.mixer.init()
+
         # Mutable state
         self.previous_goal = ""
         self.consecutive_goals = 0
 
         self.play_for_consecutive_goal = {
             1: lambda: self.play_sound_in("goal"),
-            2: lambda: self.play_sound_in("second_goal"),
+            2: lambda: self.play_sound_in("goal"),
             3: lambda: self.play_sound_in("third_goal"),
             4: lambda: self.play_sound_in("fourth_goal"),
             5: lambda: self.play_sound_in("fifth_goal")
+        }
+
+        self.number_sound_files = {
+            1: "One.wav",
+            2: "Two.wav",
+            3: "Three.wav",
+            4: "Four.wav",
+            5: "Five.wav",
+            6: "Six.wav",
+            7: "Seven.wav",
+            8: "Eight.wav",
+            9: "Nine.wav"
         }
 
     def process_event(self, event):
@@ -46,6 +60,14 @@ class SoundEventHandler(EventHandler):
 
             self.previous_goal = current_goal
 
+            try:
+                a_num_goals = int(event[2])
+                b_num_goals = int(event[4])
+                if a_num_goals + b_num_goals > 4:
+                    self.announce_score(a_num_goals, b_num_goals)
+            except:
+                pass
+
         else:
             pass    # Ignore unknown event
 
@@ -56,12 +78,15 @@ class SoundEventHandler(EventHandler):
         self.play(file_list[random.randint(0, len(file_list) - 1)])
 
     def play(self, file):
-        pygame.mixer.init()
         # Stop the mixer if something's playing
         if pygame.mixer.music.get_busy():
             pygame.mixer.stop()
-        pygame.mixer.music.load(file)
-        pygame.mixer.music.play()
+        pygame.mixer.music.queue(file)
+
+    def announce_score(self, a_num_goals, b_num_goals):
+        path = self.sound_path + "/numbers/"
+        pygame.mixer.music.queue(path + self.number_sound_files[a_num_goals])
+        pygame.mixer.music.queue(path + self.number_sound_files[b_num_goals])
 
     def cleanup(self):
         pass
