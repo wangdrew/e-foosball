@@ -3,6 +3,7 @@ from os.path import isfile, join
 import time
 import random
 from EventHandler import EventHandler
+from SoundOutput import SoundOutput
 
 
 class SoundEventHandler(EventHandler):
