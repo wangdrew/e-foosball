@@ -15,10 +15,11 @@ class SoundEventHandler(EventHandler):
         # Mutable state
         self.previous_goal = ""
         self.consecutive_goals = 0
+        self.total_goals = 0
 
         self.play_for_consecutive_goal = {
             1: lambda: self.play_sound_in("goal"),
-            2: lambda: self.play_sound_in("goal"),
+            2: lambda: self.play_sound_in("second_goal") if self.total_goals == 2 else self.play_sound_in("goal"),
             3: lambda: self.play_sound_in("third_goal"),
             4: lambda: self.play_sound_in("fourth_goal"),
             5: lambda: self.play_sound_in("fifth_goal")
@@ -41,7 +42,9 @@ class SoundEventHandler(EventHandler):
             self.play_sound_in("new_game")
             self.previous_goal = ""
             self.consecutive_goals = 0
+            self.total_goals = 0
         elif "A" is event[0] or "B" is event[0]: # A or B is the 1st character
+            self.total_goals += 1
             current_goal = event[0]     # extract which goal "A" or "B"
             if self.previous_goal == "":
                 self.consecutive_goals = 1
