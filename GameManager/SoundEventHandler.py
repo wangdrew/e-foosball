@@ -2,15 +2,15 @@ from os import listdir
 from os.path import isfile, join
 import time
 import random
-import pygame
 from EventHandler import EventHandler
+
 
 class SoundEventHandler(EventHandler):
 
-    sound_path = "./sounds"  # TODO: hardcoded for now
+    sound_path = "/home/pi/dev/e-foosball/GameManager/sounds"  # TODO: hardcoded for now
 
     def __init__(self):
-        pygame.mixer.init()
+        self.sound = SoundOutput()
 
         # Mutable state
         self.previous_goal = ""
@@ -63,7 +63,7 @@ class SoundEventHandler(EventHandler):
             try:
                 a_num_goals = int(event[2])
                 b_num_goals = int(event[4])
-                if a_num_goals + b_num_goals > 4:
+                if a_num_goals + b_num_goals > 2:
                     self.announce_score(a_num_goals, b_num_goals)
             except:
                 pass
@@ -75,20 +75,14 @@ class SoundEventHandler(EventHandler):
     def play_sound_in(self, folder_name):
         path = self.sound_path + "/" + folder_name
         file_list = [f for f in listdir(path) if isfile(join(path, f))]
-        self.play(file_list[random.randint(0, len(file_list) - 1)])
-
-    def play(self, file):
-        # Stop the mixer if something's playing
-        if pygame.mixer.music.get_busy():
-            pygame.mixer.stop()
-        pygame.mixer.music.queue(file)
+        self.sound.play_sound_now(path + "/" + file_list[random.randint(0, len(file_list) - 1)])
 
     def announce_score(self, a_num_goals, b_num_goals):
+        print("announcing: " + str(a_num_goals) + " " + str(b_num_goals))
         path = self.sound_path + "/numbers/"
-        pygame.mixer.music.queue(path + self.number_sound_files[a_num_goals])
-        pygame.mixer.music.queue(path + self.number_sound_files[b_num_goals])
+        self.sound.queue_sound(path + self.number_sound_files[a_num_goals])
+        self.sound.queue_sound(path + self.number_sound_files[b_num_goals])
 
     def cleanup(self):
-        pass
-        pygame.mixer.quit()
+        self.sound.cleanup()
 
