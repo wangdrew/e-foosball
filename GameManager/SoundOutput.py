@@ -28,13 +28,18 @@ class SoundOutput():
 
     def sound_output_thread(self, sound_q, pygame_lock):
         while True:
+            print("status: "+ pygame.mixer.music.get_busy() + " q " + sound_q.empty())
             if not pygame.mixer.music.get_busy() and not sound_q.empty():
+                print("acquired_lock")
                 pygame_lock.acquire()
                 sound_file = sound_q.get()
                 print("Playing queued sound: " + sound_file)
+                print(sound_q.empty())
                 pygame.mixer.music.load(sound_file)
                 pygame.mixer.music.play()
+                print("going to release lock")
                 pygame_lock.release()
+                print("released lock")
 
     def cleanup(self):
         try:

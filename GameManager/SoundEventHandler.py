@@ -12,6 +12,7 @@ class SoundEventHandler(EventHandler):
 
     def __init__(self):
         self.sound = SoundOutput()
+        self.sound.run()
 
         # Mutable state
         self.previous_goal = ""
