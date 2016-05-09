@@ -23,7 +23,7 @@ int goalStripPinMatrix[2][3] = {
     {3,5,6},   //strip 0 RGB
     {9,10,11}  //strip 1 RGB
 };
-int pinPowerSwitch = 2;
+int pinResetButton = 2;
 int pinGoalSensorA = 7;
 int pinGoalSensorB = 8;
 int pinScoreStripA = 12;
@@ -67,12 +67,14 @@ uint32_t scoreStripBlack = scoreStripA.Color(colorBlack[R], colorBlack[G], color
 int maxGoals = 5;
 unsigned long lightsOutTimeoutSec = 300;
 unsigned long msInSec = 1000;
+unsigned long debounceTimeoutMs = 1000;
 
 // Mutable state variables
 volatile int state = STATE_NEW_GAME;
 int numGoalsA = 0;
 int numGoalsB = 0;
 unsigned long lastGoalTs = millis();
+volatile unsigned long lastResetButtonHit = millis();
 
 
 void setupPins() {
@@ -85,9 +87,16 @@ void setupPins() {
   pinMode(pinGoalSensorB, INPUT);
 }
 
-void togglePowerState() {
-  if (state != STATE_POWER_OFF) state = STATE_POWER_OFF;
-  else state = STATE_NEW_GAME;
+void resetButtonHit() {
+  unsigned long timeNow = millis();
+  unsigned long timeSinceLastReset = 0;
+  if (timeNow < lastResetButtonHit) timeSinceLastReset = (MAX_UNSIGNED_LONG - lastResetButtonHit) + timeNow;
+  else timeSinceLastReset = timeNow - lastResetButtonHit;
+
+  if (timeSinceLastReset > debounceTimeoutMs) {
+    state = STATE_NEW_GAME;
+    lastResetButtonHit = timeNow;
+  }
 }
 
 void drawGoalStrip(int stripIdx, int *color) {
@@ -214,8 +223,10 @@ void flashVictoryB() {
 
 void setup() {
  setupPins;
-// pinMode(pinPowerSwitch, INPUT_PULLUP);
-// attachInterrupt(0, togglePowerState, CHANGE);
+
+ // setup reset button pin (this must be in setup function directly)
+ pinMode(pinResetButton, INPUT_PULLUP);
+ attachInterrupt(0, resetButtonHit, FALLING);
 
  Serial.begin(9600);
  scoreStripA.begin();
