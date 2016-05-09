@@ -73,9 +73,14 @@ class SoundEventHandler(EventHandler):
                 self.consecutive_goals = 1
 
             # announce score
-            if sound and a_num_goals > 0 and b_num_goals > 0:
-                sound += self.get_sound_byte(self.get_sound_from_number_dir(a_num_goals))
-                sound += self.get_sound_byte(self.get_sound_from_number_dir(b_num_goals))
+            if sound:
+                if 0 < a_num_goals < 5 and 0 < b_num_goals < 5:
+                    sound += self.get_sound_byte(self.get_sound_from_number_dir(a_num_goals))
+                    sound += self.get_sound_byte(self.get_sound_from_number_dir(b_num_goals))
+                elif a_num_goals == 5:
+                    sound += self.get_sound_byte(self.get_sound_from_dir("redwin"))
+                elif b_num_goals == 5:
+                    sound += self.get_sound_byte(self.get_sound_from_dir("bluewin"))
 
             self.previous_goal = current_goal
 
