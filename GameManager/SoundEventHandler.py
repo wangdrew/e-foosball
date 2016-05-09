@@ -78,9 +78,9 @@ class SoundEventHandler(EventHandler):
                     sound += self.get_sound_byte(self.get_sound_from_number_dir(a_num_goals))
                     sound += self.get_sound_byte(self.get_sound_from_number_dir(b_num_goals))
                 elif a_num_goals == 5:
-                    sound += self.get_sound_byte(self.get_sound_from_dir("redwin"))
-                elif b_num_goals == 5:
                     sound += self.get_sound_byte(self.get_sound_from_dir("bluewin"))
+                elif b_num_goals == 5:
+                    sound += self.get_sound_byte(self.get_sound_from_dir("redwin"))
 
             self.previous_goal = current_goal
 
