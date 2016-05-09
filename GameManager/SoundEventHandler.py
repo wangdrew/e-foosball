@@ -3,31 +3,29 @@ from os.path import isfile, join
 import time
 import random
 from EventHandler import EventHandler
-from SoundOutput import SoundOutput
 
+from pydub import AudioSegment
+from pydub.playback import play
 
 class SoundEventHandler(EventHandler):
 
     sound_path = "/home/pi/dev/e-foosball/GameManager/sounds"  # TODO: hardcoded for now
 
     def __init__(self):
-        self.sound = SoundOutput()
-        self.sound.run()
-
         # Mutable state
         self.previous_goal = ""
         self.consecutive_goals = 0
         self.total_goals = 0
 
-        self.play_for_consecutive_goal = {
-            1: lambda: self.play_sound_in("goal"),
-            2: lambda: self.play_sound_in("second_goal") if self.total_goals == 2 else self.play_sound_in("goal"),
-            3: lambda: self.play_sound_in("third_goal"),
-            4: lambda: self.play_sound_in("fourth_goal"),
-            5: lambda: self.play_sound_in("fifth_goal")
+        self.consecutive_goal_sound = {
+            1: lambda: self.get_sound_from_dir("goal"),
+            2: lambda: self.get_sound_from_dir("second_goal") if self.total_goals == 2 else self.get_sound_from_dir("goal"),
+            3: lambda: self.get_sound_from_dir("third_goal"),
+            4: lambda: self.get_sound_from_dir("fourth_goal"),
+            5: lambda: self.get_sound_from_dir("fifth_goal")
         }
 
-        self.number_sound_files = {
+        self.number_sound = {
             1: "One.wav",
             2: "Two.wav",
             3: "Three.wav",
@@ -40,54 +38,69 @@ class SoundEventHandler(EventHandler):
         }
 
     def process_event(self, event):
+        sound = None
+
+        # new game event
         if "newgame" in event:
-            self.play_sound_in("new_game")
+            sound = self.get_sound_byte(self.get_sound_from_dir("new_game"))
             self.previous_goal = ""
             self.consecutive_goals = 0
             self.total_goals = 0
-        elif "A" is event[0] or "B" is event[0]: # A or B is the 1st character
+
+        # goal event
+        elif "A" is event[0] or "B" is event[0]:  # A or B is the 1st character
             self.total_goals += 1
-            current_goal = event[0]     # extract which goal "A" or "B"
+            current_goal = event[0]      # extract which goal "A" or "B"
+            a_num_goals = int(event[2])  # extract number of A and B goals
+            b_num_goals = int(event[4])
+
+            # first goal
             if self.previous_goal == "":
                 self.consecutive_goals = 1
-                self.play_sound_in("opener_goal")
+                sound = self.get_sound_byte(self.get_sound_from_dir("opener_goal"))
 
+            # goal streak
             elif self.previous_goal == current_goal:
                 self.consecutive_goals += 1
-                self.play_for_consecutive_goal[self.consecutive_goals]()
+                sound = self.get_sound_byte(self.consecutive_goal_sound[self.consecutive_goals]())
 
+            # comeback and all other goals
             else:
                 if self.consecutive_goals == 4:
-                    self.play_sound_in("comeback")
+                    sound = self.get_sound_byte(self.get_sound_from_dir("comeback"))
                 else:
-                    self.play_sound_in("goal")
+                    sound = self.get_sound_byte(self.get_sound_from_dir("goal"))
                 self.consecutive_goals = 1
+
+            # announce score
+            if sound and a_num_goals > 0 and b_num_goals > 0:
+                sound += self.get_sound_byte(self.get_sound_from_number_dir(a_num_goals))
+                sound += self.get_sound_byte(self.get_sound_from_number_dir(b_num_goals))
 
             self.previous_goal = current_goal
 
-            try:
-                a_num_goals = int(event[2])
-                b_num_goals = int(event[4])
-                if a_num_goals + b_num_goals > 2:
-                    self.announce_score(a_num_goals, b_num_goals)
-            except:
-                pass
-
+        # unknown event
         else:
-            pass    # Ignore unknown event
+            pass
+
+        if sound:
+            play(sound)
 
 
-    def play_sound_in(self, folder_name):
+    def get_sound_byte(self, sound_path):
+        return AudioSegment.from_wav(sound_path)
+
+    def get_sound_from_dir(self, folder_name):
         path = self.sound_path + "/" + folder_name
         file_list = [f for f in listdir(path) if isfile(join(path, f))]
-        self.sound.play_sound_now(path + "/" + file_list[random.randint(0, len(file_list) - 1)])
+        return path + "/" + file_list[random.randint(0, len(file_list) - 1)]
 
-    def announce_score(self, a_num_goals, b_num_goals):
-        print("announcing: " + str(a_num_goals) + " " + str(b_num_goals))
-        path = self.sound_path + "/numbers/"
-        self.sound.queue_sound(path + self.number_sound_files[a_num_goals])
-        self.sound.queue_sound(path + self.number_sound_files[b_num_goals])
+    def get_sound_from_number_dir(self, num):
+        if 0 < num < 10:
+            return self.sound_path + "/numbers/" + self.number_sound[num]
+        else:
+            return None
 
     def cleanup(self):
-        self.sound.cleanup()
+        pass
 
